@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">CV-Ads-Mobile</string>
+    <string name="shared_preferences_key">SHARED_PREFERENCES</string>
+    <string name="shared_preferences_language_key">SHARED_PREFERENCES_LANGUAGE</string>
+
+    <string name="shared_preferences_language_ua_key">ua</string>
+    <string name="shared_preferences_language_en_key">en</string>
+</resources>
