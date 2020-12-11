@@ -1,13 +1,20 @@
 package com.example.cv_ads_mobile
 
+import android.content.Context
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.*
 import com.example.cv_ads_mobile.services.PersistentStorage
+import com.example.cv_ads_mobile.dto.requests.LoginRequest
+import com.example.cv_ads_mobile.dto.responses.JwtResponse
+import com.google.gson.GsonBuilder
+import okhttp3.*
+import java.io.IOException
 
 class LoginActivity : AppCompatActivity() {
     private val persistentStorage: PersistentStorage = PersistentStorage(this)
+    private val httpClient = OkHttpClient()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -18,13 +25,13 @@ class LoginActivity : AppCompatActivity() {
 
         val loginButton = findViewById<Button>(R.id.loginButton)
         loginButton.setOnClickListener {
-            if (login(emailEditText.text.toString(), passwordEditText.text.toString())) {
-                val intent = Intent(this, MainActivity::class.java)
-                startActivity(intent)
-            } else {
-                val message = getLocalizedErrorMessage()
-                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-            }
+            val email = emailEditText.text.toString()
+            val password = passwordEditText.text.toString()
+            login(
+                LoginRequest(
+                    email,
+                    password
+                ), this)
         }
 
         setupNavigation()
@@ -50,15 +57,6 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
-
-    private fun getLocalizedErrorMessage(): String {
-        var message = "Log in failed!"
-        if (persistentStorage.getCurrentLanguage() == getString(R.string.shared_preferences_language_ua_key)) {
-            message = "Помилка!"
-        }
-        return message
-    }
-
     private fun setupNavigation() {
         val navigateToRegisterButton = findViewById<Button>(R.id.navigateToRegisterButton)
         navigateToRegisterButton.setOnClickListener {
@@ -67,9 +65,48 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
+    private fun login(loginRequest: LoginRequest, context: Context) {
+        val url = getString(R.string.api_base_url) + getString(R.string.api_login_partner_url)
+        val content = GsonBuilder().create().toJson(loginRequest)
+        println("[*] Request: $content")
 
-    private fun login(email: String, password: String): Boolean {
-        // TODO: implement
-        return email == "ihor.tsoi@nure.ua" && password == "password"
+        val request = Request.Builder()
+            .url(url)
+            .post(RequestBody.create(MediaType.parse("application/json"), content))
+            .addHeader("Accept-Language", persistentStorage.getCurrentLanguage())
+            .build()
+
+        httpClient.newCall(request).enqueue(object: Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                println("[*] Request error: ${e.message}")
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val jsonResponse = response.body()?.string()
+                println("[*] Response: $jsonResponse")
+
+                if (response.isSuccessful) {
+                    val jwt = GsonBuilder().create()
+                        .fromJson(jsonResponse, JwtResponse::class.java)
+                    persistentStorage.setAccessToken(jwt.accessToken)
+
+                    val intent = Intent(context, MainActivity::class.java)
+                    startActivity(intent)
+                } else {
+                    val message = getLocalizedErrorMessage()
+                    runOnUiThread {
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        })
+    }
+
+    private fun getLocalizedErrorMessage(): String {
+        var message = "Log in failed!"
+        if (persistentStorage.getCurrentLanguage() == getString(R.string.shared_preferences_language_ua_key)) {
+            message = "Помилка!"
+        }
+        return message
     }
 }
