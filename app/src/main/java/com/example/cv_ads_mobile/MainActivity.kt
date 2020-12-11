@@ -6,7 +6,8 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.Switch
 import android.widget.TextView
-import com.example.cv_ads_mobile.models.SmartDevice
+import android.widget.Toast
+import com.example.cv_ads_mobile.dto.responses.SmartDeviceResponse
 import com.example.cv_ads_mobile.services.PersistentStorage
 
 class MainActivity : AppCompatActivity() {
@@ -14,9 +15,9 @@ class MainActivity : AppCompatActivity() {
     private var isCachingSwitch: Switch? = null
     private var isScreenTurnedOnSwitch: Switch? = null
 
-    val persistentStorage: PersistentStorage = PersistentStorage(this)
-    private var list: List<SmartDevice> = listOf()
-    private var index: Int = 0
+    private val persistentStorage: PersistentStorage = PersistentStorage(this)
+    private var smartDevices: List<SmartDeviceResponse> = listOf()
+    private var currentSmartDeviceIndex: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,7 +27,7 @@ class MainActivity : AppCompatActivity() {
         isCachingSwitch = findViewById<Switch>(R.id.isCachingSwitch)
         isScreenTurnedOnSwitch = findViewById<Switch>(R.id.isScreenTurnedOnSwitch)
 
-        list = getSmartDevices()
+        smartDevices = getSmartDevices()
         updateView()
 
         setupPreviousNextButtons()
@@ -57,25 +58,37 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getSmartDevices(): List<SmartDevice> {
+    private fun getSmartDevices(): List<SmartDeviceResponse> {
         // TODO: implement
         return listOf(
-            SmartDevice("a", true, true),
-            SmartDevice("b", true, false),
-            SmartDevice("c", false, false)
+            SmartDeviceResponse(
+                "a",
+                true,
+                true
+            ),
+            SmartDeviceResponse(
+                "b",
+                true,
+                false
+            ),
+            SmartDeviceResponse(
+                "c",
+                false,
+                false
+            )
         )
     }
 
     private fun updateView() {
-        if (list.count() == 0) {
+        if (smartDevices.count() == 0) {
             return;
         }
 
-        val smartDevice: SmartDevice = list[index]
+        val smartDevice: SmartDeviceResponse = smartDevices[currentSmartDeviceIndex]
 
-        serialNumberTextView?.setText(smartDevice.SerialNumber)
-        isCachingSwitch?.setChecked(smartDevice.IsCahing)
-        isScreenTurnedOnSwitch?.setChecked(smartDevice.IsScreenTurnedOn)
+        serialNumberTextView?.setText(smartDevice.serialNumber)
+        isCachingSwitch?.setChecked(smartDevice.isCaching)
+        isScreenTurnedOnSwitch?.setChecked(smartDevice.isScreenTurnedOn)
     }
 
     private fun setupPreviousNextButtons() {
@@ -83,8 +96,8 @@ class MainActivity : AppCompatActivity() {
         val previousButton = findViewById<Button>(R.id.previousButton)
 
         fun resetButtons() {
-            val first = index == 0
-            val last = index >= (list.count() - 1)
+            val first = currentSmartDeviceIndex == 0
+            val last = currentSmartDeviceIndex >= (smartDevices.count() - 1)
 
             previousButton.isEnabled = true
             previousButton.isClickable = true
@@ -102,8 +115,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         nextButton.setOnClickListener {
-            if (index + 1 < list.count()) {
-                index++
+            if (currentSmartDeviceIndex + 1 < smartDevices.count()) {
+                currentSmartDeviceIndex++
                 updateView()
                 resetButtons()
             }
@@ -111,8 +124,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         previousButton.setOnClickListener {
-            if (index - 1 > -1) {
-                index--
+            if (currentSmartDeviceIndex - 1 > -1) {
+                currentSmartDeviceIndex--
                 updateView()
                 resetButtons()
             }
