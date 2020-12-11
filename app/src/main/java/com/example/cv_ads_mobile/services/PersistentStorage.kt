@@ -30,6 +30,24 @@ class PersistentStorage {
         }
     }
 
+    public fun getAccessToken(): String {
+        val preferences = getPreferences()
+        return preferences.getString(
+            context.getString(R.string.shared_preferences_token_key),
+            ""
+        ) ?: ""
+    }
+
+    public fun setAccessToken(accessToken: String) {
+        val preferences = getPreferences()
+        with(preferences.edit()) {
+            putString(
+                context.getString(R.string.shared_preferences_token_key),
+                accessToken
+            )
+            commit()
+        }
+    }
 
     private fun getPreferences(): SharedPreferences {
         return context.getSharedPreferences(
