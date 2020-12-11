@@ -1,5 +1,6 @@
 package com.example.cv_ads_mobile
 
+import android.content.Context
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -7,10 +8,15 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import com.example.cv_ads_mobile.dto.requests.RegisterRequest
 import com.example.cv_ads_mobile.services.PersistentStorage
+import com.google.gson.GsonBuilder
+import okhttp3.*
+import java.io.IOException
 
 class RegisterActivity : AppCompatActivity() {
     private val persistentStorage: PersistentStorage = PersistentStorage(this)
+    private val httpClient = OkHttpClient()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -20,13 +26,16 @@ class RegisterActivity : AppCompatActivity() {
         val passwordEditText = findViewById<EditText>(R.id.registerPasswordEditText)
 
         findViewById<Button>(R.id.registerButton).setOnClickListener {
-            if (register(emailEditText.text.toString(), passwordEditText.text.toString())) {
-                val intent = Intent(this, LoginActivity::class.java)
-                startActivity(intent)
-            } else {
-                val message = getLocalizedErrorMessage()
-                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-            }
+            val email = emailEditText.text.toString()
+            val password = passwordEditText.text.toString()
+
+            register(
+                RegisterRequest(
+                    "DEFAULT_FIRST_NAME",
+                    "DEFAULT_LAST_NAME",
+                    email,
+                    password
+                ), this)
         }
     }
 
@@ -46,9 +55,37 @@ class RegisterActivity : AppCompatActivity() {
         }
     }
 
-    private fun register(email: String, password: String): Boolean {
-        // TODO: implement
-        return email == "new.ihor.tsoi@nure.ua" && password == "password"
+    private fun register(registerRequest: RegisterRequest, context: Context) {
+        val url = getString(R.string.api_base_url) + getString(R.string.api_register_partner_url)
+        val content = GsonBuilder().create().toJson(registerRequest)
+        println("[*] Request: $content")
+
+        val request = Request.Builder()
+            .url(url)
+            .post(RequestBody.create(MediaType.parse("application/json"), content))
+            .addHeader("Accept-Language", persistentStorage.getCurrentLanguage())
+            .build()
+
+        httpClient.newCall(request).enqueue(object: Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                println("[*] Request error: ${e.message}")
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val jsonResponse = response.body()?.string()
+                println("[*] Response: $jsonResponse")
+
+                if (response.isSuccessful) {
+                    val intent = Intent(context, LoginActivity::class.java)
+                    startActivity(intent)
+                } else {
+                    val message = getLocalizedErrorMessage()
+                    runOnUiThread {
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        })
     }
 
     private fun getLocalizedErrorMessage(): String {
