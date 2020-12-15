@@ -8,9 +8,12 @@
 
     <string name="shared_preferences_token_key">TOKEN</string>
 
-    <string name="api_base_url">http://192.168.0.107:5000</string>
+    <string name="api_base_url">http://192.168.0.101:5000</string>
     <string name="api_login_partner_url">/partners/login</string>
     <string name="api_register_partner_url">/partners/register</string>
     <string name="api_get_payment_amount_url">/partners/revenue</string>
     <string name="api_withdraw_url">/partners/revenue</string>
+    <string name="api_update_smart_device_configuration">/smartdevices/{id}</string>
+    <string name="api_get_smart_devices">/smartdevices</string>
+    <string name="api_activate_smart_device">/smartdevices/activate</string>
 </resources>

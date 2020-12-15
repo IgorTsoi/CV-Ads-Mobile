@@ -1,13 +1,20 @@
 package com.example.cv_ads_mobile
 
+import android.content.Context
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.*
+import com.example.cv_ads_mobile.dto.requests.ActivateSmartDeviceRequest
+import com.example.cv_ads_mobile.dto.responses.JwtResponse
 import com.example.cv_ads_mobile.services.PersistentStorage
+import com.google.gson.GsonBuilder
+import okhttp3.*
+import java.io.IOException
 
 class ActivateSmartDeviceActivity : AppCompatActivity() {
     private val persistentStorage: PersistentStorage = PersistentStorage(this)
+    private val httpClient = OkHttpClient()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -23,13 +30,10 @@ class ActivateSmartDeviceActivity : AppCompatActivity() {
             val defaultPassword = defaultPasswordEditText.text.toString()
             val newPassword = newPasswordEditText.text.toString()
 
-            if (activateSmartDevice(serialNumber, defaultPassword, newPassword)) {
-                val intent = Intent(this, MainActivity::class.java)
-                startActivity(intent)
-            } else {
-                val message = getLocalizedFailureMessage()
-                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-            }
+            activateSmartDevice(
+                ActivateSmartDeviceRequest(serialNumber, defaultPassword, newPassword),
+                this
+            )
         }
     }
 
@@ -52,18 +56,46 @@ class ActivateSmartDeviceActivity : AppCompatActivity() {
     }
 
     private fun activateSmartDevice(
-        serialNumber: String,
-        defaultPassword: String,
-        newPassword: String
-    ) : Boolean {
-        // TODO: implement
-        return newPassword == "password"
+        activateSmartDeviceRequest: ActivateSmartDeviceRequest,
+        context: Context
+    ) {
+        val url = getString(R.string.api_base_url) + getString(R.string.api_activate_smart_device)
+        val content = GsonBuilder().create().toJson(activateSmartDeviceRequest)
+        println("[*] Request: $content")
+
+        val request = Request.Builder()
+            .url(url)
+            .post(RequestBody.create(MediaType.parse("application/json"), content))
+            .addHeader("Accept-Language", persistentStorage.getCurrentLanguage())
+            .addHeader("Authorization", "Bearer " + persistentStorage.getAccessToken())
+            .build()
+
+        httpClient.newCall(request).enqueue(object: Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                println("[*] Request error: ${e.message}")
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                val jsonResponse = response.body()?.string()
+                println("[*] Response: $jsonResponse")
+
+                if (response.isSuccessful) {
+                    val intent = Intent(context, MainActivity::class.java)
+                    startActivity(intent)
+                } else {
+                    val message = getLocalizedFailureMessage()
+                    runOnUiThread {
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        })
     }
 
     private fun getLocalizedFailureMessage(): String {
-        var message = "Activation failed."
+        var message = "Activation failed. Please connect the device to WI-FI."
         if (persistentStorage.getCurrentLanguage() == getString(R.string.shared_preferences_language_ua_key)) {
-            message = "Помилка!"
+            message = "Помилка активації! Будь-ласка під'єднайте пристрій до WI-FI."
         }
         return message
     }
