@@ -9,6 +9,8 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import com.example.cv_ads_mobile.dto.requests.RegisterRequest
+import com.example.cv_ads_mobile.services.CVAdsApiService
+import com.example.cv_ads_mobile.services.CVAdsApiUrlBuilder
 import com.example.cv_ads_mobile.services.PersistentStorage
 import com.google.gson.GsonBuilder
 import okhttp3.*
@@ -17,6 +19,9 @@ import java.io.IOException
 class RegisterActivity : AppCompatActivity() {
     private val persistentStorage: PersistentStorage = PersistentStorage(this)
     private val httpClient = OkHttpClient()
+    private val cvAdsApiService = CVAdsApiService(
+        CVAdsApiUrlBuilder(this), persistentStorage
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,17 +61,9 @@ class RegisterActivity : AppCompatActivity() {
     }
 
     private fun register(registerRequest: RegisterRequest, context: Context) {
-        val url = getString(R.string.api_base_url) + getString(R.string.api_register_partner_url)
-        val content = GsonBuilder().create().toJson(registerRequest)
-        println("[*] Request: $content")
+        val httpCall = httpClient.newCall(cvAdsApiService.createRegisterRequest(registerRequest))
 
-        val request = Request.Builder()
-            .url(url)
-            .post(RequestBody.create(MediaType.parse("application/json"), content))
-            .addHeader("Accept-Language", persistentStorage.getCurrentLanguage())
-            .build()
-
-        httpClient.newCall(request).enqueue(object: Callback {
+        httpCall.enqueue(object: Callback {
             override fun onFailure(call: Call, e: IOException) {
                 println("[*] Request error: ${e.message}")
             }

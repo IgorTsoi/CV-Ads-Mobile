@@ -6,7 +6,8 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.*
 import com.example.cv_ads_mobile.dto.requests.ActivateSmartDeviceRequest
-import com.example.cv_ads_mobile.dto.responses.JwtResponse
+import com.example.cv_ads_mobile.services.CVAdsApiService
+import com.example.cv_ads_mobile.services.CVAdsApiUrlBuilder
 import com.example.cv_ads_mobile.services.PersistentStorage
 import com.google.gson.GsonBuilder
 import okhttp3.*
@@ -15,6 +16,9 @@ import java.io.IOException
 class ActivateSmartDeviceActivity : AppCompatActivity() {
     private val persistentStorage: PersistentStorage = PersistentStorage(this)
     private val httpClient = OkHttpClient()
+    private val cvAdsApiService = CVAdsApiService(
+        CVAdsApiUrlBuilder(this), persistentStorage
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,18 +63,11 @@ class ActivateSmartDeviceActivity : AppCompatActivity() {
         activateSmartDeviceRequest: ActivateSmartDeviceRequest,
         context: Context
     ) {
-        val url = getString(R.string.api_base_url) + getString(R.string.api_activate_smart_device)
-        val content = GsonBuilder().create().toJson(activateSmartDeviceRequest)
-        println("[*] Request: $content")
+        val httpCall = httpClient.newCall(
+            cvAdsApiService.createActivateSmartDeviceRequest(activateSmartDeviceRequest)
+        )
 
-        val request = Request.Builder()
-            .url(url)
-            .post(RequestBody.create(MediaType.parse("application/json"), content))
-            .addHeader("Accept-Language", persistentStorage.getCurrentLanguage())
-            .addHeader("Authorization", "Bearer " + persistentStorage.getAccessToken())
-            .build()
-
-        httpClient.newCall(request).enqueue(object: Callback {
+        httpCall.enqueue(object: Callback {
             override fun onFailure(call: Call, e: IOException) {
                 println("[*] Request error: ${e.message}")
             }

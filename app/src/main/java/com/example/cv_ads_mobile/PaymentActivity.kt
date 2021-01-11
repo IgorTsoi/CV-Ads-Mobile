@@ -7,12 +7,17 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
+import com.example.cv_ads_mobile.services.CVAdsApiService
+import com.example.cv_ads_mobile.services.CVAdsApiUrlBuilder
 import com.example.cv_ads_mobile.services.PersistentStorage
 import okhttp3.*
 import java.io.IOException
 
 class PaymentActivity : AppCompatActivity() {
     private val persistentStorage: PersistentStorage = PersistentStorage(this)
+    private val cvAdsApiService = CVAdsApiService(
+        CVAdsApiUrlBuilder(this), persistentStorage
+    )
     private val httpClient = OkHttpClient()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,15 +46,8 @@ class PaymentActivity : AppCompatActivity() {
     }
 
     private fun getPaymentAmount() {
-        val url = getString(R.string.api_base_url) + getString(R.string.api_get_payment_amount_url)
-
-        val request = Request.Builder()
-            .url(url)
-            .addHeader("Accept-Language", persistentStorage.getCurrentLanguage())
-            .addHeader("Authorization", "Bearer " + persistentStorage.getAccessToken())
-            .build()
-
-        httpClient.newCall(request).enqueue(object: Callback {
+        val httpCall = httpClient.newCall(cvAdsApiService.createGetPaymentAmountRequest())
+        httpCall.enqueue(object: Callback {
             override fun onFailure(call: Call, e: IOException) {
                 println("[*] Request error: ${e.message}")
             }
@@ -72,16 +70,8 @@ class PaymentActivity : AppCompatActivity() {
     }
 
     private fun withdraw(context: Context) {
-        val url = getString(R.string.api_base_url) + getString(R.string.api_withdraw_url)
-
-        val request = Request.Builder()
-            .url(url)
-            .method("POST", RequestBody.create(null, ""))
-            .addHeader("Accept-Language", persistentStorage.getCurrentLanguage())
-            .addHeader("Authorization", "Bearer " + persistentStorage.getAccessToken())
-            .build()
-
-        httpClient.newCall(request).enqueue(object: Callback {
+        val httpCall = httpClient.newCall(cvAdsApiService.createWithdrawRequest())
+        httpCall.enqueue(object: Callback {
             override fun onFailure(call: Call, e: IOException) {
                 println("[*] Request error: ${e.message}")
             }

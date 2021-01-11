@@ -11,6 +11,8 @@ import android.widget.TextView
 import android.widget.Toast
 import com.example.cv_ads_mobile.dto.requests.SmartDeviceUpdateConfigurationRequest
 import com.example.cv_ads_mobile.dto.responses.SmartDeviceResponse
+import com.example.cv_ads_mobile.services.CVAdsApiService
+import com.example.cv_ads_mobile.services.CVAdsApiUrlBuilder
 import com.example.cv_ads_mobile.services.PersistentStorage
 import com.google.gson.GsonBuilder
 import com.google.gson.reflect.TypeToken
@@ -24,6 +26,9 @@ class MainActivity : AppCompatActivity() {
 
     private val persistentStorage: PersistentStorage = PersistentStorage(this)
     private val httpClient = OkHttpClient()
+    private val cvAdsApiService = CVAdsApiService(
+        CVAdsApiUrlBuilder(this), persistentStorage
+    )
 
     private var smartDevices: List<SmartDeviceResponse> = listOf()
     private var currentSmartDeviceIndex: Int = 0
@@ -70,15 +75,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun fetchSmartDevices() {
-        val url = getString(R.string.api_base_url) + getString(R.string.api_get_smart_devices)
+        val httpCall = httpClient.newCall(cvAdsApiService.createGetAllSmartDevicesRequest())
 
-        val request = Request.Builder()
-            .url(url)
-            .addHeader("Accept-Language", persistentStorage.getCurrentLanguage())
-            .addHeader("Authorization", "Bearer " + persistentStorage.getAccessToken())
-            .build()
-
-        httpClient.newCall(request).enqueue(object: Callback {
+        httpCall.enqueue(object: Callback {
             override fun onFailure(call: Call, e: IOException) {
                 println("[*] Request error: ${e.message}")
             }
@@ -222,20 +221,13 @@ class MainActivity : AppCompatActivity() {
         updateConfigurationRequest: SmartDeviceUpdateConfigurationRequest,
         context: Context
     ) {
-        val url = getString(R.string.api_base_url) +
-            getString(R.string.api_update_smart_device_configuration)
-                .replace("{id}", smartDevice.id)
-        val content = GsonBuilder().create().toJson(updateConfigurationRequest)
-        println("[*] Request: $content")
+        val httpCall = httpClient.newCall(
+            cvAdsApiService.createUpdateSmartDeviceRequest(
+                smartDevice, updateConfigurationRequest
+            )
+        )
 
-        val request = Request.Builder()
-            .url(url)
-            .patch(RequestBody.create(MediaType.parse("application/json"), content))
-            .addHeader("Accept-Language", persistentStorage.getCurrentLanguage())
-            .addHeader("Authorization", "Bearer " + persistentStorage.getAccessToken())
-            .build()
-
-        httpClient.newCall(request).enqueue(object: Callback {
+        httpCall.enqueue(object: Callback {
             override fun onFailure(call: Call, e: IOException) {
                 println("[*] Request error: ${e.message}")
             }
